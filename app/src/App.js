@@ -13,6 +13,7 @@ export async function approve(escrowContract, signer) {
 
 function App() {
   const [escrows, setEscrows] = useState([]);
+  // eslint-disable-next-line
   const [account, setAccount] = useState();
   const [signer, setSigner] = useState();
   const [ethAmount, setEthAmount] = useState('');
