@@ -1,27 +1,23 @@
-// scripts/deploy.js
-const hre = require("hardhat");
+const { ethers } = require("hardhat");
 
 async function main() {
-  const [deployer] = await hre.ethers.getSigners();
+  const Escrow = await ethers.getContractFactory("Escrow");
 
-  console.log("Deploying Escrow.sol with account:", deployer.address);
-  console.log("Account balance:", (await deployer.getBalance()).toString());
+  const arbiter = process.env.ARBITER || "0x0000000000000000000000000000000000000000";
+  const beneficiary = process.env.BENEFICIARY || "0x0000000000000000000000000000000000000000";
 
-  const Escrow = await hre.ethers.getContractFactory("Escrow");
+  const esc = await Escrow.deploy(arbiter, beneficiary, {
+    value: ethers.utils.parseEther("1")
+  });
 
-  // Dummy default addresses — replace with real ones
-  const arbiter = "0x0000000000000000000000000000000000000001";
-  const beneficiary = "0x0000000000000000000000000000000000000002";
-  const deposit = hre.ethers.utils.parseEther("1"); // 1 ETH
+  await esc.deployed();
 
-  const escrow = await Escrow.deploy(arbiter, beneficiary, { value: deposit });
-
-  await escrow.deployed();
-
-  console.log("Escrow deployed to:", escrow.address);
+  console.log("Escrow deployed to:", esc.address);
 }
 
-main().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
-});
+main()
+  .then(() => process.exit(0))
+  .catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });
