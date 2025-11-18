@@ -1,16 +1,18 @@
-require("@nomicfoundation/hardhat-toolbox");
+require("@nomiclabs/hardhat-waffle");
+require("@nomiclabs/hardhat-ethers");
 require("dotenv").config();
 
 module.exports = {
-  solidity: "0.8.18",
+  solidity: "0.8.19",
+
   networks: {
-    localhost: {
-      url: "http://127.0.0.1:8545",
+    hardhat: {
       chainId: 31337,
     },
+
     sepolia: {
-      url: process.env.SEPOLIA_RPC_URL,
-      accounts: [process.env.PRIVATE_KEY],
-    },
-  },
+      url: process.env.SEPOLIA_RPC || "",
+      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : []
+    }
+  }
 };
