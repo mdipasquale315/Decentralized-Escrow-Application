@@ -20,7 +20,7 @@ function App() {
   const [weiAmount, setWeiAmount] = useState("");
   const [status, setStatus] = useState("");
 
-  // 🔹 Connect wallet on load
+  // Connect wallet on load
   useEffect(() => {
     async function connect() {
       try {
@@ -34,6 +34,161 @@ function App() {
     connect();
   }, []);
 
-  // 🔹 Convert ETH → WEI
+  // Convert ETH → Wei
   function handleEthChange(e) {
-    const eth = e.target.v
+    const eth = e.target.value;
+    setEthAmount(eth);
+
+    try {
+      const wei = ethers.utils.parseEther(eth || "0").toString();
+      setWeiAmount(wei);
+    } catch {
+      setWeiAmount("");
+    }
+  }
+
+  // Convert Wei → ETH
+  function handleWeiChange(e) {
+    const wei = e.target.value;
+    setWeiAmount(wei);
+
+    try {
+      const eth = ethers.utils.formatEther(wei || "0");
+      setEthAmount(eth);
+    } catch {
+      setEthAmount("");
+    }
+  }
+
+  // Deploy a new escrow instance
+  async function newContract() {
+    const arbiter = document.getElementById("arbiter").value.trim();
+    const beneficiary = document.getElementById("beneficiary").value.trim();
+
+    if (!ethers.utils.isAddress(arbiter)) {
+      setStatus("❌ Invalid arbiter address");
+      return;
+    }
+
+    if (!ethers.utils.isAddress(beneficiary)) {
+      setStatus("❌ Invalid beneficiary address");
+      return;
+    }
+
+    if (!weiAmount || weiAmount === "0") {
+      setStatus("❌ Enter a valid deposit amount");
+      return;
+    }
+
+    if (!signer) {
+      setStatus("❌ Connect your wallet first");
+      return;
+    }
+
+    setStatus("⏳ Deploying… confirm in your wallet…");
+
+    try {
+      const value = ethers.BigNumber.from(weiAmount);
+
+      const escrowContract = await deploy(
+        signer,
+        arbiter,
+        beneficiary,
+        value
+      );
+
+      const newEscrow = {
+        address: escrowContract.address,
+        arbiter,
+        beneficiary,
+        value: ethAmount,
+        handleApprove: async () => {
+          escrowContract.on("Approved", () => {
+            const el = document.getElementById(escrowContract.address);
+            if (el) {
+              el.className = "complete";
+              el.innerText = "✓ It's been approved!";
+            }
+          });
+
+          setStatus("⏳ Waiting for approval…");
+          await approve(escrowContract, signer);
+          setStatus("✔ Escrow approved");
+        },
+      };
+
+      setEscrows((prev) => [...prev, newEscrow]);
+      setEthAmount("");
+      setWeiAmount("");
+
+      setStatus("✔ Contract deployed successfully!");
+    } catch (err) {
+      console.error(err);
+      setStatus("❌ " + err.message);
+    }
+  }
+
+  return (
+    <div className="contract">
+      <h1>New Escrow Contract</h1>
+
+      <div className="connected-account">
+        Connected: {account || "Not connected"}
+      </div>
+
+      {status && <div className="status">{status}</div>}
+
+      <label>
+        Arbiter Address
+        <input type="text" id="arbiter" placeholder="0x..." />
+      </label>
+
+      <label>
+        Beneficiary Address
+        <input type="text" id="beneficiary" placeholder="0x..." />
+      </label>
+
+      <label>
+        Deposit Amount (ETH)
+        <input
+          type="text"
+          value={ethAmount}
+          onChange={handleEthChange}
+          placeholder="1.0"
+        />
+      </label>
+
+      <label>
+        Deposit Amount (Wei)
+        <input
+          type="text"
+          value={weiAmount}
+          onChange={handleWeiChange}
+          placeholder="1000000000000000000"
+        />
+      </label>
+
+      <div
+        className="button"
+        id="deploy"
+        onClick={(e) => {
+          e.preventDefault();
+          newContract();
+        }}
+      >
+        Deploy
+      </div>
+
+      <div className="existing-contracts">
+        <h1>Existing Contracts</h1>
+        <div id="container">
+          {escrows.map((escrow) => (
+            <Escrow key={escrow.address} {...escrow} />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default App;
